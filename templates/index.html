@@ -64,12 +64,12 @@
                 <!-- Quick Stats Overlay -->
                 <div class="map-stats-overlay">
                     <div class="hero-stat">
-                        <span id="map-total-count" class="hero-stat-num" data-count="{{ stats.total_pharmacies }}">0</span>
+                        <span id="map-total-count" class="hero-stat-num" data-count="{{ stats.total_pharmacies }}">{{ stats.total_pharmacies }}</span>
                         <span class="hero-stat-label">Toplam</span>
                     </div>
                     <div class="hero-stat-divider"></div>
                     <div class="hero-stat">
-                        <span id="map-duty-count" class="hero-stat-num" style="color: var(--danger)" data-count="{{ stats.on_duty }}">0</span>
+                        <span id="map-duty-count" class="hero-stat-num" style="color: var(--danger)" data-count="{{ stats.on_duty }}">{{ stats.on_duty }}</span>
                         <span class="hero-stat-label">Nöbetçi</span>
                     </div>
                 </div>
