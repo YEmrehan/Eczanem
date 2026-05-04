@@ -7,7 +7,7 @@
 <section class="page-header page-header-admin">
     <div class="container">
         <h1 class="page-title">Yönetim Paneli</h1>
-        <p class="page-subtitle">Stok, sipariş ve satış yönetimi</p>
+        <p class="page-subtitle">Sistemdeki eczane ve stok bilgilerini yönetin</p>
     </div>
 </section>
 
@@ -21,7 +21,7 @@
                 </div>
                 <div class="admin-stat-info">
                     <span class="admin-stat-num" data-count="{{ stats.total_products }}">0</span>
-                    <span class="admin-stat-label">Toplam Ürün</span>
+                    <span class="admin-stat-label">Toplam Varyant</span>
                 </div>
             </div>
             <div class="admin-stat-card">
@@ -30,7 +30,7 @@
                 </div>
                 <div class="admin-stat-info">
                     <span class="admin-stat-num" data-count="{{ stats.in_stock }}">0</span>
-                    <span class="admin-stat-label">Stokta</span>
+                    <span class="admin-stat-label">Stokta Olanlar</span>
                 </div>
             </div>
             <div class="admin-stat-card">
@@ -53,74 +53,10 @@
             </div>
         </div>
 
-        <!-- Revenue Card -->
-        <div class="admin-revenue-card">
-            <div class="revenue-info">
-                <span class="revenue-label">Toplam Stok Değeri</span>
-                <span class="revenue-amount">₺{{ "{:,.2f}".format(stats.total_value) }}</span>
-            </div>
-            <div class="revenue-chart">
-                <div class="mini-bar" style="--h: 40%"></div>
-                <div class="mini-bar" style="--h: 65%"></div>
-                <div class="mini-bar" style="--h: 45%"></div>
-                <div class="mini-bar" style="--h: 80%"></div>
-                <div class="mini-bar" style="--h: 55%"></div>
-                <div class="mini-bar" style="--h: 90%"></div>
-                <div class="mini-bar mini-bar-active" style="--h: 72%"></div>
-            </div>
-        </div>
-
-        <!-- Admin Tabs -->
-        <div class="admin-tabs">
-            <button class="admin-tab active" onclick="switchTab('orders')">
-                📋 Siparişler
-            </button>
-            <button class="admin-tab" onclick="switchTab('products')">
-                📦 Ürün Yönetimi
-            </button>
-        </div>
-
-        <!-- Orders Table -->
-        <div class="admin-panel" id="tab-orders">
-            <div class="table-header">
-                <h3 class="table-title">Son Siparişler</h3>
-            </div>
-            <div class="table-wrapper">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Sipariş No</th>
-                            <th>Müşteri</th>
-                            <th>Ürün Sayısı</th>
-                            <th>Tutar</th>
-                            <th>Durum</th>
-                            <th>Tarih</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in orders %}
-                        <tr>
-                            <td><span class="order-id">{{ order.id }}</span></td>
-                            <td>{{ order.customer }}</td>
-                            <td>{{ order['items'] }}</td>
-                            <td class="price-cell">₺{{ "%.2f"|format(order.total) }}</td>
-                            <td>
-                                <span class="order-status status-{{ order.status|lower|replace('ı','i')|replace('ş','s')|replace('ö','o') }}">
-                                    {{ order.status }}
-                                </span>
-                            </td>
-                            <td class="date-cell">{{ order.date }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
         <!-- Products Table -->
-        <div class="admin-panel hidden" id="tab-products">
+        <div class="admin-panel" id="tab-products">
             <div class="table-header">
-                <h3 class="table-title">Ürün Listesi</h3>
+                <h3 class="table-title">Merkezi Stok Yönetimi</h3>
                 <button class="btn-primary btn-sm" onclick="showToast('Bu özellik yakında aktif olacak!')">
                     + Ürün Ekle
                 </button>
@@ -130,11 +66,10 @@
                     <thead>
                         <tr>
                             <th>Ürün Adı</th>
+                            <th>Eczane</th>
                             <th>Kategori</th>
-                            <th>Fiyat</th>
                             <th>Stok</th>
                             <th>Durum</th>
-                            <th>İşlem</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -149,18 +84,13 @@
                                     </div>
                                 </div>
                             </td>
+                            <td>{{ product.pharmacy_name }}</td>
                             <td>{{ product.category_info.name }}</td>
-                            <td class="price-cell">₺{{ "%.2f"|format(product.price) }}</td>
                             <td>{{ product.stock }}</td>
                             <td>
                                 <span class="stock-badge {{ product.stock_status.class }}">
                                     {{ product.stock_status.label }}
                                 </span>
-                            </td>
-                            <td>
-                                <button class="btn-icon" title="Düzenle" onclick="showToast('Düzenleme yakında!')">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                </button>
                             </td>
                         </tr>
                         {% endfor %}

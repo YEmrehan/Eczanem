@@ -26,50 +26,6 @@ function animateCounter(el) {
   requestAnimationFrame(tick);
 }
 
-/* ─── Live Search ───────────────────────────────── */
-const heroInput = document.getElementById('hero-search-input');
-const heroResults = document.getElementById('hero-search-results');
-let debounceTimer;
-
-if (heroInput && heroResults) {
-  heroInput.addEventListener('input', () => {
-    clearTimeout(debounceTimer);
-    const q = heroInput.value.trim();
-    if (q.length < 2) { heroResults.classList.remove('active'); return; }
-    debounceTimer = setTimeout(() => fetchResults(q), 250);
-  });
-
-  heroInput.addEventListener('blur', () => {
-    setTimeout(() => heroResults.classList.remove('active'), 200);
-  });
-}
-
-async function fetchResults(query) {
-  try {
-    const res = await fetch(`/api/products?search=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    if (!data.length) { heroResults.classList.remove('active'); return; }
-    heroResults.innerHTML = data.slice(0, 5).map(p => `
-      <a href="/urunler?search=${encodeURIComponent(p.name)}" class="search-result-item">
-        <span class="search-result-name">${p.category_info.icon} ${p.name}</span>
-        <span class="search-result-price">₺${p.price.toFixed(2)}</span>
-      </a>
-    `).join('');
-    heroResults.classList.add('active');
-  } catch (e) {
-    console.error('Search error:', e);
-  }
-}
-
-/* ─── Admin Tabs ────────────────────────────────── */
-function switchTab(tabName) {
-  document.querySelectorAll('.admin-panel').forEach(p => p.classList.add('hidden'));
-  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-  const panel = document.getElementById('tab-' + tabName);
-  if (panel) panel.classList.remove('hidden');
-  event.currentTarget.classList.add('active');
-}
-
 /* ─── Toast ─────────────────────────────────────── */
 function showToast(message) {
   let toast = document.querySelector('.toast');
@@ -83,7 +39,78 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
-/* ─── Add to Cart (demo) ────────────────────────── */
-function addToCart(productName) {
-  showToast(`✅ ${productName} sepete eklendi!`);
-}
+/* ─── Map Integration ───────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+    const mapElement = document.getElementById('map');
+    if (!mapElement) return; // Only run on map page
+
+    // Initialize map centered on Turkey
+    const map = L.map('map').setView([39.0, 35.0], 6);
+
+    // Dark theme tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    let markers = [];
+
+    // Custom icons
+    const normalIcon = L.divIcon({
+        className: 'custom-pin normal-pin',
+        html: '💊',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30]
+    });
+
+    const dutyIcon = L.divIcon({
+        className: 'custom-pin duty-pin',
+        html: '🚨',
+        iconSize: [36, 36],
+        iconAnchor: [18, 36]
+    });
+
+    // Fetch and render pharmacies
+    fetch('/api/pharmacies')
+        .then(res => res.json())
+        .then(data => {
+            renderMarkers(data);
+
+            // Filter toggle
+            const toggle = document.getElementById('on-duty-filter');
+            if(toggle) {
+                toggle.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        const filtered = data.filter(p => p.on_duty);
+                        renderMarkers(filtered);
+                    } else {
+                        renderMarkers(data);
+                    }
+                });
+            }
+        });
+
+    function renderMarkers(pharmacies) {
+        // Clear existing markers
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        pharmacies.forEach(ph => {
+            const icon = ph.on_duty ? dutyIcon : normalIcon;
+            const marker = L.marker([ph.lat, ph.lng], { icon: icon }).addTo(map);
+            
+            let dutyBadge = ph.on_duty ? `<div style="color:var(--danger); font-weight:bold; font-size:12px; margin-bottom:5px;">Nöbetçi Eczane</div>` : "";
+            
+            marker.bindPopup(`
+                <div class="map-popup">
+                    ${dutyBadge}
+                    <h3 style="margin:0 0 5px 0; color:#333;">${ph.name}</h3>
+                    <p style="margin:0 0 10px 0; font-size:12px; color:#666;">${ph.address}</p>
+                    <a href="/urunler?pharmacy=${ph.id}" style="display:inline-block; padding:5px 10px; background:var(--primary); color:white; border-radius:4px; text-decoration:none; font-size:13px; font-weight:bold;">Stokları Gör</a>
+                </div>
+            `);
+            markers.push(marker);
+        });
+    }
+});
