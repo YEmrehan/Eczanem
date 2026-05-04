@@ -60,25 +60,37 @@ def fetch_osm_pharmacies():
         
         for idx, element in enumerate(elements):
             tags = element.get('tags', {})
-            name = tags.get('name', 'Bilinmeyen Eczane')
-            district = tags.get('addr:district', 'Bilinmeyen İlçe')
+            name = tags.get('name', '').strip()
+            if not name:
+                name = 'İsimsiz Eczane'
+            district = tags.get('addr:district', '').strip()
+            
+            rg_result = results[idx]
+            # District fallback using reverse geocoding
+            if not district:
+                district = rg_result.get('admin2', '')
+                if not district:
+                    district = rg_result.get('name', 'Merkez')
             
             # Reverse Geocoder'dan ili al ve normalize et
-            rg_city = results[idx]['admin1']
+            rg_city = rg_result['admin1']
             norm_rg = normalize_city_name(rg_city)
             
             # Listemizdeki 81 il ile eşleştir
-            mapped_city = "Bilinmeyen İl"
+            mapped_city = "İstanbul" # Default to İstanbul instead of Bilinmeyen
             for c in CITIES:
-                if normalize_city_name(c) == norm_rg or normalize_city_name(c) in norm_rg:
+                norm_c = normalize_city_name(c)
+                # Fuzzy match: "Istanbul" matches "İstanbul", "Province of Istanbul" matches "İstanbul"
+                if norm_c == norm_rg or norm_c in norm_rg or norm_rg in norm_c:
                     mapped_city = c
                     break
-                    
-            # Acil durumlar için OSM tag fallback
-            if mapped_city == "Bilinmeyen İl":
-                city_tag = tags.get('addr:province', tags.get('addr:city', ''))
+                        
+            # OSM tag fallback if rg failed
+            city_tag = tags.get('addr:province', tags.get('addr:city', ''))
+            if city_tag:
+                norm_tag = normalize_city_name(city_tag)
                 for c in CITIES:
-                    if normalize_city_name(c) == normalize_city_name(city_tag):
+                    if normalize_city_name(c) == norm_tag:
                         mapped_city = c
                         break
                         

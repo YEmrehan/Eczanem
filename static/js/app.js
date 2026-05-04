@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 matchCity = pCity.includes(normCity) || pDist.includes(normCity) || pAddr.includes(normCity);
             }
             
-            if (matchCity && p.district && p.district !== "BİLİNMEYEN İLÇE") {
+            if (matchCity && p.district) {
                 districts.add(p.district);
             }
         });
@@ -151,6 +151,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         listCountBadge.textContent = currentFiltered.length + " Bulundu";
         
+        // Update Map Stats Overlay
+        let mapTotalCount = document.getElementById('map-total-count');
+        let mapDutyCount = document.getElementById('map-duty-count');
+        if (mapTotalCount) mapTotalCount.textContent = currentFiltered.length;
+        if (mapDutyCount) {
+            let dutyCount = currentFiltered.filter(p => p.on_duty).length;
+            mapDutyCount.textContent = dutyCount;
+        }
+        
         // Reset List & Map
         displayedCount = 0;
         listContainer.innerHTML = "";
@@ -195,15 +204,15 @@ document.addEventListener('DOMContentLoaded', () => {
         markersGroup.addLayers(mapMarkers);
     }
 
-    // 6. Lazy Loading List
+    // 6. Pagination List (Click to Load More)
     function setupLazyLoading() {
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && displayedCount < currentFiltered.length) {
-                loadMoreListItems();
-            }
-        }, { root: listContainer, threshold: 0.1 });
-        
-        if(loadMoreTrigger) observer.observe(loadMoreTrigger);
+        if(loadMoreTrigger) {
+            loadMoreTrigger.addEventListener('click', () => {
+                if (displayedCount < currentFiltered.length) {
+                    loadMoreListItems();
+                }
+            });
+        }
     }
 
     function loadMoreListItems() {

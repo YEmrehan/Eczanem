@@ -52,9 +52,9 @@
                 <div id="pharmacy-list" class="pharmacy-list-container">
                     <!-- Cards will be injected by JS (Lazy Loaded) -->
                 </div>
-                <div id="load-more-trigger" style="text-align: center; padding: 15px; color: var(--text-muted); display: none;">
-                    Daha fazla yükleniyor...
-                </div>
+                <button id="load-more-trigger" class="btn-primary" style="display: block; width: 100%; border-radius: 0; padding: 12px; display: none;">
+                    Daha Fazla Göster
+                </button>
             </div>
 
             <!-- Map View -->
@@ -64,12 +64,12 @@
                 <!-- Quick Stats Overlay -->
                 <div class="map-stats-overlay">
                     <div class="hero-stat">
-                        <span class="hero-stat-num" data-count="{{ stats.total_pharmacies }}">0</span>
+                        <span id="map-total-count" class="hero-stat-num" data-count="{{ stats.total_pharmacies }}">0</span>
                         <span class="hero-stat-label">Toplam</span>
                     </div>
                     <div class="hero-stat-divider"></div>
                     <div class="hero-stat">
-                        <span class="hero-stat-num" style="color: var(--danger)" data-count="{{ stats.on_duty }}">0</span>
+                        <span id="map-duty-count" class="hero-stat-num" style="color: var(--danger)" data-count="{{ stats.on_duty }}">0</span>
                         <span class="hero-stat-label">Nöbetçi</span>
                     </div>
                 </div>
