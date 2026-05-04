@@ -13,6 +13,14 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
+// XSS Protection: Escape HTML entities in user-generated content
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // Map & List Integration
 document.addEventListener('DOMContentLoaded', () => {
     const mapElement = document.getElementById('map');
@@ -193,9 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
             marker.bindPopup(`
                 <div class="map-popup">
                     ${dutyBadge}
-                    <h3 style="margin:0 0 5px 0; color:#333; font-size:15px;">${ph.name}</h3>
-                    <p style="margin:0 0 10px 0; font-size:12px; color:#666;">${ph.address}</p>
-                    <a href="/urunler?pharmacy=${ph.id}" style="display:inline-block; margin-top:5px; padding:5px 10px; background:var(--primary); color:white; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">Stokları Gör</a>
+                    <h3 style="margin:0 0 5px 0; color:#333; font-size:15px;">${escapeHtml(ph.name)}</h3>
+                    <p style="margin:0 0 10px 0; font-size:12px; color:#666;">${escapeHtml(ph.address)}</p>
+                    <a href="/urunler?pharmacy=${encodeURIComponent(ph.id)}" style="display:inline-block; margin-top:5px; padding:5px 10px; background:var(--primary); color:white; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">Stokları Gör</a>
                 </div>
             `);
             mapMarkersDict[ph.id] = marker;
@@ -225,11 +233,11 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'pharmacy-list-card';
             let badge = ph.on_duty ? `<span style="color:var(--danger); font-size:0.75rem; font-weight:bold;">🚨 Nöbetçi</span>` : '';
             card.innerHTML = `
-                <h4>${ph.name} ${badge}</h4>
-                <p>${ph.address || 'Adres bilgisi yok'}</p>
+                <h4>${escapeHtml(ph.name)} ${badge}</h4>
+                <p>${escapeHtml(ph.address) || 'Adres bilgisi yok'}</p>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:0.8rem; color:var(--primary)">📍 Haritada Bul</span>
-                    <a href="/urunler?pharmacy=${ph.id}" class="badge" style="text-decoration:none; background:var(--bg-card); color:var(--text); border:1px solid var(--border);">Stok Gör</a>
+                    <a href="/urunler?pharmacy=${encodeURIComponent(ph.id)}" class="badge" style="text-decoration:none; background:var(--bg-card); color:var(--text); border:1px solid var(--border);">Stok Gör</a>
                 </div>
             `;
             // Click to center map and open popup

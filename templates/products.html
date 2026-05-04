@@ -36,7 +36,7 @@
                     <input type="text" name="search" value="{{ search }}" placeholder="İlaç ara..." class="search-input" autocomplete="off">
                 </div>
                 <div class="search-box search-box-sm" style="flex:1; min-width:150px;">
-                    <select name="city" class="search-input custom-select" onchange="this.form.pharmacy.value=''; this.form.submit()">
+                    <select name="city" class="search-input custom-select" onchange="this.form.pharmacy.value=''; var catInput=this.form.querySelector('input[name=category]'); if(catInput) catInput.remove(); this.form.submit()">
                         {% for c in cities %}
                         <option value="{{ c }}" {% if active_city == c %}selected{% endif %}>{{ c }}</option>
                         {% endfor %}

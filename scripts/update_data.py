@@ -3,6 +3,9 @@ from bs4 import BeautifulSoup
 import json
 import os
 import time
+import concurrent.futures
+import reverse_geocoder as rg
+import re
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 FILE_PATH = os.path.join(DATA_DIR, 'pharmacies.json')
@@ -19,17 +22,24 @@ CITIES = [
 ]
 
 def normalize_city_name(city_name):
-    char_map = {'ı': 'i', 'ğ': 'g', 'ü': 'u', 'ş': 's', 'ö': 'o', 'ç': 'c', 'I': 'i', 'İ': 'i'}
-    city = city_name.lower()
-    for tr, eng in char_map.items():
+    """Normalize Turkish city names for comparison."""
+    # Önce büyük Türkçe harfleri dönüştür (İ → i, I → i özellikle kritik)
+    char_map_upper = {'İ': 'i', 'I': 'i', 'Ğ': 'g', 'Ü': 'u', 'Ş': 's', 'Ö': 'o', 'Ç': 'c'}
+    city = city_name
+    for tr, eng in char_map_upper.items():
         city = city.replace(tr, eng)
-    if city == "afyonkarahisar": return "afyon"
-    if city == "kahramanmaras": return "maras"
+    city = city.lower()
+    # Sonra küçük Türkçe harfleri dönüştür
+    char_map_lower = {'ı': 'i', 'ğ': 'g', 'ü': 'u', 'ş': 's', 'ö': 'o', 'ç': 'c'}
+    for tr, eng in char_map_lower.items():
+        city = city.replace(tr, eng)
     return city
 
-import math
-
-import reverse_geocoder as rg
+# Afyonkarahisar ve Kahramanmaraş için scraping URL alias’ları (normalize’dan bağımsız)
+SCRAPE_URL_ALIASES = {
+    "Afyonkarahisar": "afyon",
+    "Kahramanmaraş": "maras",
+}
 
 def fetch_osm_pharmacies():
     print("OpenStreetMap'ten tüm TÜRKİYE eczaneleri tek seferde çekiliyor...")
@@ -77,22 +87,33 @@ def fetch_osm_pharmacies():
             norm_rg = normalize_city_name(rg_city)
             
             # Listemizdeki 81 il ile eşleştir
-            mapped_city = "İstanbul" # Default to İstanbul instead of Bilinmeyen
+            mapped_city = None
+            rg_matched = False
             for c in CITIES:
                 norm_c = normalize_city_name(c)
-                # Fuzzy match: "Istanbul" matches "İstanbul", "Province of Istanbul" matches "İstanbul"
-                if norm_c == norm_rg or norm_c in norm_rg or norm_rg in norm_c:
+                # Tam eşleşme veya biri diğerini içeriyor (en az 3 karakter güvenlik)
+                if norm_c == norm_rg:
                     mapped_city = c
+                    rg_matched = True
+                    break
+                elif len(norm_rg) >= 3 and (norm_c in norm_rg or norm_rg in norm_c):
+                    mapped_city = c
+                    rg_matched = True
                     break
                         
-            # OSM tag fallback if rg failed
-            city_tag = tags.get('addr:province', tags.get('addr:city', ''))
-            if city_tag:
-                norm_tag = normalize_city_name(city_tag)
-                for c in CITIES:
-                    if normalize_city_name(c) == norm_tag:
-                        mapped_city = c
-                        break
+            # OSM tag fallback SADECE RG eşleşemediğinde kullanılır
+            if not rg_matched:
+                city_tag = tags.get('addr:province', tags.get('addr:city', ''))
+                if city_tag:
+                    norm_tag = normalize_city_name(city_tag)
+                    for c in CITIES:
+                        if normalize_city_name(c) == norm_tag:
+                            mapped_city = c
+                            break
+            
+            # Hala eşleşmezse varsayılan İstanbul
+            if not mapped_city:
+                mapped_city = "İstanbul"
                         
             pharmacies.append({
                 "id": str(element['id']),
@@ -112,17 +133,17 @@ def fetch_osm_pharmacies():
     print(f"Toplam {len(pharmacies)} sabit eczane haritadan bulundu ve kusursuz illere dağıtıldı.")
     return pharmacies
 
-import concurrent.futures
+
 
 def fetch_on_duty_pharmacies():
+    """Nöbetçi eczaneleri şehir bazında kazır. {city: set(names)} döndürür."""
     print("81 İl için nöbetçi eczaneler asenkron kazınıyor (Saniyeler sürecek)...")
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
-    on_duty_names = set()
     
     def scrape_city(city):
-        url_city = normalize_city_name(city)
+        url_city = SCRAPE_URL_ALIASES.get(city, normalize_city_name(city))
         url = f"https://www.eczaneler.gen.tr/nobetci-{url_city}"
         local_names = set()
         try:
@@ -143,30 +164,46 @@ def fetch_on_duty_pharmacies():
                                     local_names.add(clean_name.lower())
         except Exception as e:
             pass # Hata durumunda sessizce geç
-        return local_names
+        return (city, local_names)
 
     # Eşzamanlı (Concurrent) işlem
+    on_duty_by_city = {}  # {city: set(names)}
+    total_names = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = [executor.submit(scrape_city, c) for c in CITIES]
         for future in concurrent.futures.as_completed(futures):
-            on_duty_names.update(future.result())
+            city, names = future.result()
+            if names:
+                on_duty_by_city[city] = names
+                total_names += len(names)
             
-    print(f"Toplam {len(on_duty_names)} nöbetçi eczane (81 İl) tespit edildi.")
-    return on_duty_names
+    print(f"Toplam {total_names} nöbetçi eczane (81 İl) tespit edildi.")
+    return on_duty_by_city
 
 def main():
     # 1. OSM'den sabit veriyi çek
     pharmacies = fetch_osm_pharmacies()
     
     # 2. İnternetten canlı nöbetçi verisini kazı
-    on_duty_names = fetch_on_duty_pharmacies()
+    on_duty_by_city = fetch_on_duty_pharmacies()
     
-    # 3. İkisini birleştir
+    # 3. İkisini birleştir (Şehir bazında + normalize edilmiş tam eşleşme)
     matched_count = 0
     for p in pharmacies:
-        p_name_lower = p['name'].lower()
-        for duty_name in on_duty_names:
-            if duty_name in p_name_lower or p_name_lower in duty_name:
+        city = p.get('city', '')
+        duty_names = on_duty_by_city.get(city, set())
+        if not duty_names:
+            continue
+        
+        p_name_norm = normalize_city_name(p['name'])
+        p_name_clean = re.sub(r'\s*eczanesi?\s*$', '', p_name_norm).strip()
+        
+        for duty_name in duty_names:
+            duty_norm = normalize_city_name(duty_name)
+            duty_clean = re.sub(r'\s*eczanesi?\s*$', '', duty_norm).strip()
+            
+            # Tam eşleşme (normalize edilmiş): "merkez" == "merkez"
+            if p_name_clean == duty_clean or p_name_norm == duty_norm:
                 p['on_duty'] = True
                 matched_count += 1
                 break

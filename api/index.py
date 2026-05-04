@@ -8,7 +8,6 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-import uuid
 import random
 import json
 import os
@@ -51,7 +50,9 @@ BASE_PRODUCTS = [
     {"id": "p6", "name": "Rennie Tablet", "generic": "Kalsiyum Karbonat", "category": "sindirim", "price": 48.90, "prescription": False, "barcode": "8699536090221"},
 ]
 
-# Generate random stock for each pharmacy
+# Generate deterministic stock for each pharmacy
+# Seed ensures same stock values across server restarts
+random.seed(42)
 PRODUCTS = []
 for p in BASE_PRODUCTS:
     for ph in PHARMACIES:
@@ -64,6 +65,7 @@ for p in BASE_PRODUCTS:
         prod["stock"] = stock_count
         prod["min_stock"] = 5
         PRODUCTS.append(prod)
+random.seed()  # Restore true randomness for runtime
 
 # Helper
 def get_stock_status(product: dict) -> dict:
@@ -168,6 +170,11 @@ async def admin_page(
     page: int = Query(default=1),
     limit: int = Query(default=50)
 ):
+    # Validate page/limit bounds
+    limit = max(1, min(limit, 200))
+    total_pages = max(1, (len(PRODUCTS) + limit - 1) // limit)
+    page = max(1, min(page, total_pages))
+
     stats = {
         "total_products": len(PRODUCTS),
         "in_stock": sum(1 for p in PRODUCTS if p["stock"] > 0),
@@ -180,7 +187,6 @@ async def admin_page(
     start = (page - 1) * limit
     end = start + limit
     enriched = enrich_products(PRODUCTS[start:end])
-    total_pages = (len(PRODUCTS) + limit - 1) // limit
 
     return templates.TemplateResponse("admin.html", {
         "request": request,
@@ -194,7 +200,9 @@ async def admin_page(
 
 # ─── API Endpoints ────────────────────────────────────────────
 @app.get("/api/pharmacies")
-async def api_pharmacies():
+async def api_pharmacies(city: str = Query(default="")):
+    if city:
+        return [p for p in PHARMACIES if p.get("city") == city]
     return PHARMACIES
 
 @app.get("/api/products")
