@@ -1,45 +1,80 @@
 {% extends "base.html" %}
 {% set active_page = "home" %}
 
-{% block title %}Eczaneler Haritası{% endblock %}
+{% block title %}Eczaneler Haritası ve Listesi{% endblock %}
 
 {% block content %}
-<!-- Hero / Map Section -->
-<section class="hero map-hero">
-    <div class="container hero-content">
-        <span class="hero-badge">🗺️ Türkiye Geneli Eczane Ağı</span>
-        <h1 class="hero-title">
-            Size en yakın <span class="gradient-text">eczaneyi</span> bulun
-        </h1>
-        <p class="hero-subtitle">
-            Eczaneleri harita üzerinden seçin, stoklarında aradığınız ilaçların bulunup bulunmadığını anında görün. Nöbetçi eczaneleri tek tıkla filtreleyin.
-        </p>
-        
-        <div class="map-controls">
-            <label class="toggle-control">
+<!-- Advanced Search Bar -->
+<section class="search-section" style="background: var(--bg-card); padding: 20px 0; border-bottom: 1px solid var(--border);">
+    <div class="container">
+        <div class="advanced-search-bar" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+            <div class="search-box search-box-sm" style="flex: 2; min-width: 200px;">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="name-search" placeholder="Eczane adı ara..." class="search-input">
+            </div>
+            
+            <div class="search-box search-box-sm" style="flex: 1; min-width: 150px;">
+                <select id="city-selector" class="search-input custom-select">
+                    <option value="Tümü">Tüm İller</option>
+                    {% for city in cities %}
+                    <option value="{{ city }}" {% if city == 'İstanbul' %}selected{% endif %}>{{ "%02d" % loop.index }} - {{ city }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="search-box search-box-sm" style="flex: 1; min-width: 150px;">
+                <select id="district-selector" class="search-input custom-select">
+                    <option value="">Tüm İlçeler</option>
+                    <!-- Dinamik olarak JS ile dolacak -->
+                </select>
+            </div>
+
+            <label class="toggle-control" style="flex: 1; min-width: 200px; justify-content: flex-end;">
                 <input type="checkbox" id="on-duty-filter">
                 <span class="toggle-slider"></span>
-                <span class="toggle-label">Sadece Nöbetçi Eczaneler</span>
+                <span class="toggle-label">Nöbetçiler</span>
             </label>
         </div>
+    </div>
+</section>
 
-        <div id="map" class="pharmacy-map"></div>
+<!-- Map and List View Layout -->
+<section class="section" style="padding-top: 20px;">
+    <div class="container">
+        <div class="map-list-layout">
+            
+            <!-- List View Sidebar -->
+            <div class="pharmacy-sidebar">
+                <div class="sidebar-header">
+                    <h3 style="margin:0; font-size: 1.1rem;">Eczane Listesi</h3>
+                    <span id="list-count" class="badge">0 Bulundu</span>
+                </div>
+                <div id="pharmacy-list" class="pharmacy-list-container">
+                    <!-- Cards will be injected by JS (Lazy Loaded) -->
+                </div>
+                <div id="load-more-trigger" style="text-align: center; padding: 15px; color: var(--text-muted); display: none;">
+                    Daha fazla yükleniyor...
+                </div>
+            </div>
 
-        <div class="hero-stats">
-            <div class="hero-stat">
-                <span class="hero-stat-num" data-count="{{ stats.total_pharmacies }}">0</span>
-                <span class="hero-stat-label">Kayıtlı Eczane</span>
+            <!-- Map View -->
+            <div class="pharmacy-map-container">
+                <div id="map" class="pharmacy-map-full"></div>
+                
+                <!-- Quick Stats Overlay -->
+                <div class="map-stats-overlay">
+                    <div class="hero-stat">
+                        <span class="hero-stat-num" data-count="{{ stats.total_pharmacies }}">0</span>
+                        <span class="hero-stat-label">Toplam</span>
+                    </div>
+                    <div class="hero-stat-divider"></div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-num" style="color: var(--danger)" data-count="{{ stats.on_duty }}">0</span>
+                        <span class="hero-stat-label">Nöbetçi</span>
+                    </div>
+                </div>
             </div>
-            <div class="hero-stat-divider"></div>
-            <div class="hero-stat">
-                <span class="hero-stat-num" style="color: var(--danger)" data-count="{{ stats.on_duty }}">0</span>
-                <span class="hero-stat-label">Nöbetçi</span>
-            </div>
-            <div class="hero-stat-divider"></div>
-            <div class="hero-stat">
-                <span class="hero-stat-num" data-count="{{ stats.total_products }}">0</span>
-                <span class="hero-stat-label">Farklı Ürün</span>
-            </div>
+            
         </div>
     </div>
 </section>

@@ -10,6 +10,8 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import uuid
 import random
+import json
+import os
 
 # ─── App Setup ────────────────────────────────────────────────
 app = FastAPI(title="Eczanem", description="Eczane Stok Takip Sistemi")
@@ -27,13 +29,18 @@ CATEGORIES = [
     {"id": "sindirim", "name": "Sindirim", "icon": "💚", "color": "#22c55e"},
 ]
 
-PHARMACIES = [
-    {"id": "ecz-1", "name": "Merkez Eczanesi", "city": "İstanbul", "lat": 41.0082, "lng": 28.9784, "on_duty": False, "address": "Fatih, İstanbul"},
-    {"id": "ecz-2", "name": "Sağlık Eczanesi", "city": "İstanbul", "lat": 41.0382, "lng": 28.9884, "on_duty": True, "address": "Beyoğlu, İstanbul"},
-    {"id": "ecz-3", "name": "Güneş Eczanesi", "city": "Ankara", "lat": 39.9208, "lng": 32.8541, "on_duty": False, "address": "Çankaya, Ankara"},
-    {"id": "ecz-4", "name": "Umut Eczanesi", "city": "İzmir", "lat": 38.4192, "lng": 27.1287, "on_duty": True, "address": "Konak, İzmir"},
-    {"id": "ecz-5", "name": "Hayat Eczanesi", "city": "Antalya", "lat": 36.8969, "lng": 30.7133, "on_duty": False, "address": "Muratpaşa, Antalya"},
-]
+DATA_FILE = os.path.join(BASE_DIR, 'data', 'pharmacies.json')
+
+PHARMACIES = []
+try:
+    with open(DATA_FILE, 'r', encoding='utf-8') as f:
+        PHARMACIES = json.load(f)
+except Exception as e:
+    print("Veri dosyası okunamadı, sahte veriler kullanılıyor.")
+    PHARMACIES = [
+        {"id": "ecz-1", "name": "Merkez Eczanesi", "city": "İstanbul", "lat": 41.0082, "lng": 28.9784, "on_duty": False, "address": "Fatih, İstanbul"},
+        {"id": "ecz-2", "name": "Sağlık Eczanesi", "city": "İstanbul", "lat": 41.0382, "lng": 28.9884, "on_duty": True, "address": "Beyoğlu, İstanbul"}
+    ]
 
 BASE_PRODUCTS = [
     {"id": "p1", "name": "Parol 500mg", "generic": "Parasetamol", "category": "agri", "price": 42.50, "prescription": False, "barcode": "8699536090108"},
@@ -80,17 +87,29 @@ def enrich_products(products: list) -> list:
     return enriched
 
 # ─── Page Routes ──────────────────────────────────────────────
+CITIES = [
+    "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir",
+    "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli",
+    "Diyarbakır", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari",
+    "Hatay", "Isparta", "Mersin", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir",
+    "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla", "Muş", "Nevşehir",
+    "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat",
+    "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman",
+    "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce"
+]
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     stats = {
         "total_pharmacies": len(PHARMACIES),
-        "on_duty": sum(1 for p in PHARMACIES if p["on_duty"]),
+        "on_duty": sum(1 for p in PHARMACIES if p.get("on_duty", False)),
         "total_products": len(BASE_PRODUCTS),
     }
     return templates.TemplateResponse("index.html", {
         "request": request,
         "pharmacies": PHARMACIES,
         "categories": CATEGORIES,
+        "cities": CITIES,
         "stats": stats,
     })
 
