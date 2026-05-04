@@ -135,6 +135,16 @@ def fetch_osm_pharmacies():
             if not mapped_city:
                 mapped_city = "İstanbul"
                         
+            # Eğer hala isim yoksa, alternatif etiketlere bak
+            if not name:
+                name = tags.get('name:tr', tags.get('operator', tags.get('brand', ''))).strip()
+            
+            # Alternatiflerde de yoksa ilçe adını kullanarak mantıklı bir isim üret
+            if not name or name == 'İsimsiz Eczane':
+                # Örn: 'Kadıköy Eczanesi' (Eğer Merkez ise il adını kullan)
+                fallback_name = mapped_city if district == 'Merkez' else district
+                name = f"{fallback_name.title()} Eczanesi"
+                
             pharmacies.append({
                 "id": str(element['id']),
                 "name": name,
