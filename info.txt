@@ -2,3 +2,27 @@ source .venv/bin/activate && uvicorn api.index:app --reload
 
 git init && git add . && git commit -m "Initial commit"
 # GitHub'a push et, sonra Vercel'de import et
+
+
+# 1. Repo başlat
+git init
+
+# 2. Tüm dosyaları stage'e ekle
+git add .
+
+# 3. İlk commit
+git commit -m "Initial commit"
+
+# 4. Ana dalı "main" olarak yeniden adlandır
+git branch -M main
+
+# 5. GitHub remote ekle
+git remote add origin https://github.com/YEmrehan/Eczanem.git
+
+# 6. GitHub'a push et
+git push -u origin main
+
+
+git add .
+git commit -m "değişiklik açıklaması"
+git push
