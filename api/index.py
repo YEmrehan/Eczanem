@@ -118,20 +118,35 @@ async def products_page(
     request: Request,
     search: str = Query(default=""),
     category: str = Query(default=""),
-    pharmacy: str = Query(default="")
+    pharmacy: str = Query(default=""),
+    city: str = Query(default="İstanbul")
 ):
+    selected_pharmacy = None
+    if pharmacy:
+        selected_pharmacy = next((p for p in PHARMACIES if p["id"] == pharmacy), None)
+        if selected_pharmacy:
+            city = selected_pharmacy.get("city", city)
+
+    city_pharmacies = [p for p in PHARMACIES if p.get("city") == city]
+    city_pharmacy_ids = {p["id"] for p in city_pharmacies}
+
     filtered = PRODUCTS
+    if pharmacy:
+        filtered = [p for p in filtered if p["pharmacy_id"] == pharmacy]
+    else:
+        filtered = [p for p in filtered if p["pharmacy_id"] in city_pharmacy_ids]
+
     if search:
         q = search.lower()
         filtered = [p for p in filtered if q in p["name"].lower() or q in p["generic"].lower()]
     if category:
         filtered = [p for p in filtered if p["category"] == category]
-    if pharmacy:
-        filtered = [p for p in filtered if p["pharmacy_id"] == pharmacy]
+
+    total_count = len(filtered)
+    # Limit output to prevent browser lag with thousands of items
+    filtered = filtered[:100]
 
     enriched = enrich_products(filtered)
-    
-    selected_pharmacy = next((p for p in PHARMACIES if p["id"] == pharmacy), None)
 
     return templates.TemplateResponse("products.html", {
         "request": request,
@@ -140,27 +155,41 @@ async def products_page(
         "search": search,
         "active_category": category,
         "active_pharmacy": pharmacy,
+        "active_city": city,
         "selected_pharmacy": selected_pharmacy,
-        "pharmacies": PHARMACIES,
-        "total": len(filtered),
+        "pharmacies": city_pharmacies,
+        "cities": CITIES,
+        "total": total_count,
     })
 
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_page(request: Request):
-    enriched = enrich_products(PRODUCTS)
+async def admin_page(
+    request: Request,
+    page: int = Query(default=1),
+    limit: int = Query(default=50)
+):
     stats = {
         "total_products": len(PRODUCTS),
         "in_stock": sum(1 for p in PRODUCTS if p["stock"] > 0),
         "out_of_stock": sum(1 for p in PRODUCTS if p["stock"] == 0),
         "low_stock": sum(1 for p in PRODUCTS if 0 < p["stock"] <= p["min_stock"]),
         "total_value": sum(p["price"] * p["stock"] for p in PRODUCTS),
-        "prescription_count": sum(1 for p in PRODUCTS if p["prescription"]),
+        "prescription_count": sum(1 for p in PRODUCTS if p.get("prescription", False)),
     }
+    
+    start = (page - 1) * limit
+    end = start + limit
+    enriched = enrich_products(PRODUCTS[start:end])
+    total_pages = (len(PRODUCTS) + limit - 1) // limit
+
     return templates.TemplateResponse("admin.html", {
         "request": request,
         "products": enriched,
         "categories": CATEGORIES,
         "stats": stats,
+        "page": page,
+        "total_pages": total_pages,
+        "limit": limit
     })
 
 # ─── API Endpoints ────────────────────────────────────────────

@@ -97,6 +97,23 @@
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Pagination -->
+            <div class="pagination" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-top: 1px solid var(--border);">
+                <span style="font-size: 0.85rem; color: var(--text-muted);">
+                    Sayfa {{ page }} / {{ total_pages }} (Toplam {{ stats.total_products }} Varyant)
+                </span>
+                <div style="display: flex; gap: 10px;">
+                    {% if page > 1 %}
+                    <a href="/admin?page={{ page - 1 }}" class="btn-primary btn-sm" style="background: var(--bg-surface); border: 1px solid var(--border); color: var(--text);">Önceki</a>
+                    {% endif %}
+                    
+                    {% if page < total_pages %}
+                    <a href="/admin?page={{ page + 1 }}" class="btn-primary btn-sm">Sonraki</a>
+                    {% endif %}
+                </div>
+            </div>
+            
         </div>
     </div>
 </section>

@@ -105,19 +105,33 @@ img { max-width: 100%; display: block; }
 }
 select.custom-select {
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   cursor: pointer;
-  background-color: var(--bg-surface);
+  background-color: transparent;
   color: var(--text);
+  font-weight: 500;
+  transition: var(--transition);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px;
+}
+select.custom-select:hover {
+  color: #fff;
 }
 select.custom-select option {
-  background-color: var(--bg-card);
+  background-color: var(--bg-surface);
   color: var(--text);
+  padding: 12px;
+  font-weight: normal;
 }
 .search-box-sm .search-input {
   padding: 0.6rem 1rem 0.6rem 2.5rem; font-size: 0.9rem;
 }
 select.search-input.custom-select {
-  padding-left: 1rem; /* remove space reserved for search icon */
+  padding-left: 1rem; 
+  padding-right: 2.5rem; /* space for arrow */
 }
 .search-box {
   display: flex; align-items: center; gap: 0.5rem;
@@ -508,14 +522,19 @@ select.search-input.custom-select {
 }
 @media (max-width: 900px) {
   .map-list-layout {
-    flex-direction: column-reverse;
+    flex-direction: column;
     height: auto;
+    gap: 15px;
   }
   .pharmacy-sidebar {
+    flex: none;
     height: 500px;
+    width: 100%;
   }
   .pharmacy-map-container {
+    flex: none;
     height: 400px;
+    width: 100%;
   }
 }
 .map-controls {

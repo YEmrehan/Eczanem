@@ -246,4 +246,11 @@ document.addEventListener('DOMContentLoaded', () => {
             loadMoreTrigger.style.display = 'block';
         }
     }
+
+    // Fix map rendering issues on resize/mobile orientation change
+    window.addEventListener('resize', debounce(() => {
+        if(map) {
+            map.invalidateSize();
+        }
+    }, 250));
 });
