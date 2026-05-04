@@ -76,30 +76,39 @@ def fetch_osm_pharmacies():
             district = tags.get('addr:district', '').strip()
             
             rg_result = results[idx]
-            # District fallback using reverse geocoding
-            if not district:
-                district = rg_result.get('admin2', '')
-                if not district:
-                    district = rg_result.get('name', 'Merkez')
             
             # Reverse Geocoder'dan ili al ve normalize et
             rg_city = rg_result['admin1']
             norm_rg = normalize_city_name(rg_city)
             
+            # İlçe belirle: OSM tag → RG admin2 (il ismi değilse) → RG name → Merkez
+            city_names_norm = {normalize_city_name(c) for c in CITIES}
+            if not district:
+                rg_admin2 = rg_result.get('admin2', '').strip()
+                rg_name = rg_result.get('name', '').strip()
+                # admin2 bir il ismi değilse ilçe olarak kullan
+                if rg_admin2 and normalize_city_name(rg_admin2) not in city_names_norm:
+                    district = rg_admin2
+                elif rg_name:
+                    district = rg_name
+                else:
+                    district = 'Merkez'
+            
             # Listemizdeki 81 il ile eşleştir
             mapped_city = None
             rg_matched = False
-            for c in CITIES:
-                norm_c = normalize_city_name(c)
-                # Tam eşleşme veya biri diğerini içeriyor (en az 3 karakter güvenlik)
-                if norm_c == norm_rg:
-                    mapped_city = c
-                    rg_matched = True
-                    break
-                elif len(norm_rg) >= 3 and (norm_c in norm_rg or norm_rg in norm_c):
-                    mapped_city = c
-                    rg_matched = True
-                    break
+            if norm_rg:  # RG boş döndüyse doğrudan OSM fallback'e geç
+                for c in CITIES:
+                    norm_c = normalize_city_name(c)
+                    # Tam eşleşme veya biri diğerini içeriyor (en az 3 karakter güvenlik)
+                    if norm_c == norm_rg:
+                        mapped_city = c
+                        rg_matched = True
+                        break
+                    elif len(norm_rg) >= 3 and len(norm_c) >= 3 and (norm_c in norm_rg or norm_rg in norm_c):
+                        mapped_city = c
+                        rg_matched = True
+                        break
                         
             # OSM tag fallback SADECE RG eşleşemediğinde kullanılır
             if not rg_matched:
@@ -110,6 +119,17 @@ def fetch_osm_pharmacies():
                         if normalize_city_name(c) == norm_tag:
                             mapped_city = c
                             break
+                            
+            # OSM verisinde "district" alanı yanlışlıkla İL olarak girilmişse (Örn: ADANA, BINGOL)
+            if district and normalize_city_name(district) in city_names_norm:
+                if not mapped_city:
+                    for c in CITIES:
+                        if normalize_city_name(c) == normalize_city_name(district):
+                            mapped_city = c
+                            break
+                # İlçe olarak girilen il ismini düzelt (RG name veya Merkez yap)
+                rg_name = rg_result.get('name', '').strip()
+                district = rg_name if rg_name else 'Merkez'
             
             # Hala eşleşmezse varsayılan İstanbul
             if not mapped_city:
