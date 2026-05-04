@@ -1,0 +1,4 @@
+source .venv/bin/activate && uvicorn api.index:app --reload
+
+git init && git add . && git commit -m "Initial commit"
+# GitHub'a push et, sonra Vercel'de import et

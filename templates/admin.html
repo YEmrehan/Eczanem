@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% set active_page = "admin" %}
+
+{% block title %}Yönetim Paneli{% endblock %}
+
+{% block content %}
+<section class="page-header page-header-admin">
+    <div class="container">
+        <h1 class="page-title">Yönetim Paneli</h1>
+        <p class="page-subtitle">Stok, sipariş ve satış yönetimi</p>
+    </div>
+</section>
+
+<section class="section admin-section">
+    <div class="container">
+        <!-- Stats Cards -->
+        <div class="admin-stats-grid">
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon" style="--stat-color: #10b981">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                </div>
+                <div class="admin-stat-info">
+                    <span class="admin-stat-num" data-count="{{ stats.total_products }}">0</span>
+                    <span class="admin-stat-label">Toplam Ürün</span>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon" style="--stat-color: #3b82f6">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <div class="admin-stat-info">
+                    <span class="admin-stat-num" data-count="{{ stats.in_stock }}">0</span>
+                    <span class="admin-stat-label">Stokta</span>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon" style="--stat-color: #f59e0b">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div class="admin-stat-info">
+                    <span class="admin-stat-num" data-count="{{ stats.low_stock }}">0</span>
+                    <span class="admin-stat-label">Kritik Stok</span>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon" style="--stat-color: #ef4444">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </div>
+                <div class="admin-stat-info">
+                    <span class="admin-stat-num" data-count="{{ stats.out_of_stock }}">0</span>
+                    <span class="admin-stat-label">Tükenen</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Card -->
+        <div class="admin-revenue-card">
+            <div class="revenue-info">
+                <span class="revenue-label">Toplam Stok Değeri</span>
+                <span class="revenue-amount">₺{{ "{:,.2f}".format(stats.total_value) }}</span>
+            </div>
+            <div class="revenue-chart">
+                <div class="mini-bar" style="--h: 40%"></div>
+                <div class="mini-bar" style="--h: 65%"></div>
+                <div class="mini-bar" style="--h: 45%"></div>
+                <div class="mini-bar" style="--h: 80%"></div>
+                <div class="mini-bar" style="--h: 55%"></div>
+                <div class="mini-bar" style="--h: 90%"></div>
+                <div class="mini-bar mini-bar-active" style="--h: 72%"></div>
+            </div>
+        </div>
+
+        <!-- Admin Tabs -->
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="switchTab('orders')">
+                📋 Siparişler
+            </button>
+            <button class="admin-tab" onclick="switchTab('products')">
+                📦 Ürün Yönetimi
+            </button>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="admin-panel" id="tab-orders">
+            <div class="table-header">
+                <h3 class="table-title">Son Siparişler</h3>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Sipariş No</th>
+                            <th>Müşteri</th>
+                            <th>Ürün Sayısı</th>
+                            <th>Tutar</th>
+                            <th>Durum</th>
+                            <th>Tarih</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td><span class="order-id">{{ order.id }}</span></td>
+                            <td>{{ order.customer }}</td>
+                            <td>{{ order['items'] }}</td>
+                            <td class="price-cell">₺{{ "%.2f"|format(order.total) }}</td>
+                            <td>
+                                <span class="order-status status-{{ order.status|lower|replace('ı','i')|replace('ş','s')|replace('ö','o') }}">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                            <td class="date-cell">{{ order.date }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="admin-panel hidden" id="tab-products">
+            <div class="table-header">
+                <h3 class="table-title">Ürün Listesi</h3>
+                <button class="btn-primary btn-sm" onclick="showToast('Bu özellik yakında aktif olacak!')">
+                    + Ürün Ekle
+                </button>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Ürün Adı</th>
+                            <th>Kategori</th>
+                            <th>Fiyat</th>
+                            <th>Stok</th>
+                            <th>Durum</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <div class="product-cell">
+                                    <span class="product-cell-icon">{{ product.category_info.icon }}</span>
+                                    <div>
+                                        <span class="product-cell-name">{{ product.name }}</span>
+                                        <span class="product-cell-generic">{{ product.generic }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ product.category_info.name }}</td>
+                            <td class="price-cell">₺{{ "%.2f"|format(product.price) }}</td>
+                            <td>{{ product.stock }}</td>
+                            <td>
+                                <span class="stock-badge {{ product.stock_status.class }}">
+                                    {{ product.stock_status.label }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn-icon" title="Düzenle" onclick="showToast('Düzenleme yakında!')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
