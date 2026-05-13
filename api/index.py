@@ -26,7 +26,7 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # ─── Auth Config ──────────────────────────────────────────────
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "123")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "buse")
 COOKIE_SECRET = os.environ.get("COOKIE_SECRET", "eczanem-buse-secret-key-2026")
 COOKIE_NAME = "eczanem_auth"
 
