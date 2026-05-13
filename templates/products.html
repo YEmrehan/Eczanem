@@ -6,23 +6,8 @@
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1 class="page-title">
-            {% if selected_pharmacy %}
-                {{ selected_pharmacy.name }} Stokları
-            {% else %}
-                Tüm Ürünler
-            {% endif %}
-        </h1>
-        <p class="page-subtitle">
-            {% if selected_pharmacy %}
-                {{ selected_pharmacy.address }}
-                {% if selected_pharmacy.on_duty %}
-                <span class="prescription-badge" style="margin-left: 10px;">Nöbetçi</span>
-                {% endif %}
-            {% else %}
-                Farklı eczanelerdeki stok durumlarını karşılaştırın
-            {% endif %}
-        </p>
+        <h1 class="page-title">Ürünlerimiz</h1>
+        <p class="page-subtitle">Buse Eczanesi'ndeki tüm ürünlerin stok durumunu görüntüleyin</p>
     </div>
 </section>
 
@@ -33,35 +18,18 @@
             <form class="filter-search" action="/urunler" method="get" style="display:flex; gap:10px; flex-wrap:wrap; width: 100%;">
                 <div class="search-box search-box-sm" style="flex:2; min-width:200px;">
                     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" name="search" value="{{ search }}" placeholder="İlaç ara..." class="search-input" autocomplete="off">
-                </div>
-                <div class="search-box search-box-sm" style="flex:1; min-width:150px;">
-                    <select name="city" class="search-input custom-select" onchange="this.form.pharmacy.value=''; var catInput=this.form.querySelector('input[name=category]'); if(catInput) catInput.remove(); this.form.submit()">
-                        {% for c in cities %}
-                        <option value="{{ c }}" {% if active_city == c %}selected{% endif %}>{{ c }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="search-box search-box-sm" style="flex:1; min-width:200px;">
-                    <select name="pharmacy" class="search-input custom-select" onchange="this.form.submit()">
-                        <option value="">-- Tüm {{ active_city }} Eczaneleri --</option>
-                        {% for ph in pharmacies %}
-                        <option value="{{ ph.id }}" {% if active_pharmacy == ph.id %}selected{% endif %}>
-                            {{ ph.name }} {% if ph.on_duty %} - Nöbetçi {% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <input type="text" name="search" value="{{ search }}" placeholder="İlaç adı veya etken madde ara..." class="search-input" autocomplete="off" id="product-search">
                 </div>
                 {% if active_category %}
                 <input type="hidden" name="category" value="{{ active_category }}">
                 {% endif %}
-                <button type="submit" class="search-btn search-btn-sm">Filtrele</button>
+                <button type="submit" class="search-btn search-btn-sm">Ara</button>
             </form>
             
             <div class="filter-categories" style="margin-top: 15px;">
-                <a href="/urunler?pharmacy={{ active_pharmacy }}&search={{ search }}&city={{ active_city }}" class="filter-chip {% if not active_category %}filter-chip-active{% endif %}">Tümü</a>
+                <a href="/urunler?search={{ search }}" class="filter-chip {% if not active_category %}filter-chip-active{% endif %}">Tümü ({{ total }})</a>
                 {% for cat in categories %}
-                <a href="/urunler?category={{ cat.id }}&pharmacy={{ active_pharmacy }}&search={{ search }}&city={{ active_city }}"
+                <a href="/urunler?category={{ cat.id }}&search={{ search }}"
                    class="filter-chip {% if active_category == cat.id %}filter-chip-active{% endif %}"
                    style="--cat-color: {{ cat.color }}">
                     {{ cat.icon }} {{ cat.name }}
@@ -79,10 +47,15 @@
                     <span class="product-category-badge" style="--cat-color: {{ product.category_info.color }}">
                         {{ product.category_info.icon }} {{ product.category_info.name }}
                     </span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">{{ product.pharmacy_name }}</span>
+                    {% if product.prescription %}
+                    <span class="prescription-badge">Reçeteli</span>
+                    {% endif %}
                 </div>
                 <h3 class="product-name">{{ product.name }}</h3>
                 <p class="product-generic">{{ product.generic }}</p>
+                {% if product.description %}
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.6rem; line-height: 1.4;">{{ product.description }}</p>
+                {% endif %}
                 <div class="product-meta">
                     <span class="product-barcode">📦 {{ product.barcode }}</span>
                     <span>₺{{ "%.2f"|format(product.price) }}</span>
@@ -99,7 +72,7 @@
         <div class="empty-state">
             <span class="empty-icon">🔍</span>
             <h3>Ürün bulunamadı</h3>
-            <p>Seçilen eczanede veya arama kriterlerinize uygun ürün bulunamadı.</p>
+            <p>Arama kriterlerinize uygun ürün bulunamadı.</p>
             <a href="/urunler" class="btn-primary">Tüm Kriterleri Sıfırla</a>
         </div>
         {% endif %}

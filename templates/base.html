@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Eczanem{% endblock %} — Eczane Stok Takip</title>
-    <meta name="description" content="{% block meta_desc %}Modern eczane stok takip ve satış sistemi{% endblock %}">
+    <title>{% block title %}Buse Eczanesi{% endblock %} — Eczane Stok Takip</title>
+    <meta name="description" content="{% block meta_desc %}Buse Eczanesi — Bartın Merkez, ilaç stok takip sistemi{% endblock %}">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <link rel="stylesheet" href="/static/css/style.css">
     {% block head %}{% endblock %}
 </head>
@@ -21,15 +18,18 @@
         <div class="container nav-inner">
             <a href="/" class="nav-brand">
                 <span class="brand-icon">💊</span>
-                <span class="brand-text">Eczanem</span>
+                <span class="brand-text">Buse Eczanesi</span>
             </a>
             <div class="nav-links">
-                <a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}">Harita & Eczaneler</a>
-                <a href="/urunler" class="nav-link {% if active_page == 'products' %}active{% endif %}">Tüm Ürünler</a>
+                <a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}">Ana Sayfa</a>
+                <a href="/urunler" class="nav-link {% if active_page == 'products' %}active{% endif %}">Ürünler</a>
+                {% if is_admin %}
                 <a href="/admin" class="nav-link nav-link-admin {% if active_page == 'admin' %}active{% endif %}">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                     Yönetim
                 </a>
+                <a href="/logout" class="nav-link" style="color: var(--danger); font-size: 0.82rem;">Çıkış</a>
+                {% endif %}
             </div>
             <button class="nav-mobile-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menü">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -48,16 +48,14 @@
             <div class="footer-inner">
                 <div class="footer-brand">
                     <span class="brand-icon">💊</span>
-                    <span>Eczanem</span>
+                    <span>Buse Eczanesi</span>
                 </div>
-                <p class="footer-text">Modern eczane stok takip ve satış sistemi.</p>
-                <p class="footer-copy">&copy; 2026 Eczanem. Tüm hakları saklıdır.</p>
+                <p class="footer-text">Bartın Merkez — İlaç stok takip sistemi</p>
+                <p class="footer-copy">&copy; 2026 Buse Eczanesi. Tüm hakları saklıdır.</p>
             </div>
         </div>
     </footer>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="/static/js/app.js"></script>
     {% block scripts %}{% endblock %}
 </body>

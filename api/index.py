@@ -1,76 +1,119 @@
 """
-Eczanem — Eczane Stok Takip Sistemi
+Eczanem — Buse Eczanesi Stok Takip Sistemi
 FastAPI backend with Jinja2 templates.
+Single pharmacy mode with admin authentication.
 """
 
-from fastapi import FastAPI, Request, Query
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Request, Query, Form, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.base import BaseHTTPMiddleware
 from pathlib import Path
-import random
 import json
 import os
+import uuid
+from datetime import datetime
+from hashlib import sha256
+import hmac
+import base64
 
 # ─── App Setup ────────────────────────────────────────────────
-app = FastAPI(title="Eczanem", description="Eczane Stok Takip Sistemi")
+app = FastAPI(title="Eczanem", description="Buse Eczanesi Stok Takip Sistemi")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-# ─── Demo Data ────────────────────────────────────────────────
+# ─── Auth Config ──────────────────────────────────────────────
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "123")
+COOKIE_SECRET = os.environ.get("COOKIE_SECRET", "eczanem-buse-secret-key-2026")
+COOKIE_NAME = "eczanem_auth"
+
+def create_auth_token() -> str:
+    """Create a signed auth cookie value."""
+    payload = "admin:true"
+    signature = hmac.new(COOKIE_SECRET.encode(), payload.encode(), sha256).hexdigest()
+    token = base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
+    return token
+
+def verify_auth_token(token: str) -> bool:
+    """Verify a signed auth cookie."""
+    try:
+        decoded = base64.urlsafe_b64decode(token.encode()).decode()
+        payload, signature = decoded.rsplit("|", 1)
+        expected = hmac.new(COOKIE_SECRET.encode(), payload.encode(), sha256).hexdigest()
+        return hmac.compare_digest(signature, expected) and payload == "admin:true"
+    except Exception:
+        return False
+
+def is_admin(request: Request) -> bool:
+    """Check if request has valid admin cookie."""
+    token = request.cookies.get(COOKIE_NAME)
+    if not token:
+        return False
+    return verify_auth_token(token)
+
+# ─── Middleware: inject is_admin into all template contexts ───
+class AdminContextMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        request.state.is_admin = is_admin(request)
+        response = await call_next(request)
+        return response
+
+app.add_middleware(AdminContextMiddleware)
+
+# ─── Pharmacy Data ────────────────────────────────────────────
+PHARMACY = {
+    "id": "buse-eczanesi",
+    "name": "Buse Eczanesi",
+    "city": "Bartın",
+    "district": "MERKEZ",
+    "lat": 41.6344,
+    "lng": 32.3375,
+    "on_duty": False,
+    "address": "Merkez, Bartın",
+    "phone": ""
+}
+
+# ─── Categories ───────────────────────────────────────────────
 CATEGORIES = [
     {"id": "agri", "name": "Ağrı Kesici", "icon": "💊", "color": "#ef4444"},
     {"id": "vitamin", "name": "Vitamin & Takviye", "icon": "🧬", "color": "#f59e0b"},
     {"id": "cilt", "name": "Cilt Bakımı", "icon": "✨", "color": "#ec4899"},
     {"id": "soguk", "name": "Soğuk Algınlığı", "icon": "🤧", "color": "#3b82f6"},
     {"id": "sindirim", "name": "Sindirim", "icon": "💚", "color": "#22c55e"},
+    {"id": "antibiyotik", "name": "Antibiyotik", "icon": "💉", "color": "#8b5cf6"},
+    {"id": "alerji", "name": "Alerji", "icon": "🌿", "color": "#06b6d4"},
+    {"id": "tansiyon", "name": "Tansiyon / Kalp", "icon": "❤️", "color": "#e11d48"},
+    {"id": "diyabet", "name": "Diyabet", "icon": "🩸", "color": "#d97706"},
+    {"id": "goz", "name": "Göz", "icon": "👁️", "color": "#0ea5e9"},
+    {"id": "bebek", "name": "Anne & Bebek", "icon": "👶", "color": "#f472b6"},
+    {"id": "agiz", "name": "Ağız & Diş", "icon": "🦷", "color": "#14b8a6"},
 ]
 
-DATA_FILE = os.path.join(BASE_DIR, 'data', 'pharmacies.json')
+# ─── Products Data (File-based persistence) ──────────────────
+PRODUCTS_FILE = os.path.join(BASE_DIR, 'data', 'products.json')
 
-PHARMACIES = []
-try:
-    with open(DATA_FILE, 'r', encoding='utf-8') as f:
-        PHARMACIES = json.load(f)
-except Exception as e:
-    print("Veri dosyası okunamadı, sahte veriler kullanılıyor.")
-    PHARMACIES = [
-        {"id": "ecz-1", "name": "Merkez Eczanesi", "city": "İstanbul", "lat": 41.0082, "lng": 28.9784, "on_duty": False, "address": "Fatih, İstanbul"},
-        {"id": "ecz-2", "name": "Sağlık Eczanesi", "city": "İstanbul", "lat": 41.0382, "lng": 28.9884, "on_duty": True, "address": "Beyoğlu, İstanbul"}
-    ]
+def load_products() -> list:
+    """Load products from JSON file."""
+    try:
+        with open(PRODUCTS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return []
 
-BASE_PRODUCTS = [
-    {"id": "p1", "name": "Parol 500mg", "generic": "Parasetamol", "category": "agri", "price": 42.50, "prescription": False, "barcode": "8699536090108"},
-    {"id": "p2", "name": "Nurofen 400mg", "generic": "İbuprofen", "category": "agri", "price": 67.90, "prescription": False, "barcode": "8699536090115"},
-    {"id": "p3", "name": "C Vitamini 1000mg", "generic": "Askorbik Asit", "category": "vitamin", "price": 125.00, "prescription": False, "barcode": "8699536090146"},
-    {"id": "p4", "name": "Avene Cicalfate", "generic": "Onarıcı Krem", "category": "cilt", "price": 320.00, "prescription": False, "barcode": "8699536090184"},
-    {"id": "p5", "name": "Tylol Hot", "generic": "Parasetamol + Vitamin C", "category": "soguk", "price": 56.00, "prescription": False, "barcode": "8699536090207"},
-    {"id": "p6", "name": "Rennie Tablet", "generic": "Kalsiyum Karbonat", "category": "sindirim", "price": 48.90, "prescription": False, "barcode": "8699536090221"},
-]
-
-# Generate deterministic stock for each pharmacy
-# Seed ensures same stock values across server restarts
-random.seed(42)
-PRODUCTS = []
-for p in BASE_PRODUCTS:
-    for ph in PHARMACIES:
-        # 20% chance to be out of stock
-        stock_count = 0 if random.random() < 0.2 else random.randint(1, 50)
-        prod = p.copy()
-        prod["uid"] = f"{p['id']}-{ph['id']}"
-        prod["pharmacy_id"] = ph["id"]
-        prod["pharmacy_name"] = ph["name"]
-        prod["stock"] = stock_count
-        prod["min_stock"] = 5
-        PRODUCTS.append(prod)
-random.seed()  # Restore true randomness for runtime
+def save_products(products: list):
+    """Save products to JSON file with atomic write."""
+    temp_path = PRODUCTS_FILE + '.tmp'
+    with open(temp_path, 'w', encoding='utf-8') as f:
+        json.dump(products, f, ensure_ascii=False, indent=2)
+    os.replace(temp_path, PRODUCTS_FILE)
 
 # Helper
 def get_stock_status(product: dict) -> dict:
-    stock = product["stock"]
-    min_s = product["min_stock"]
+    stock = product.get("stock", 0)
+    min_s = product.get("min_stock", 5)
     if stock == 0:
         return {"label": "Tükendi", "class": "stock-out", "level": 0}
     elif stock <= min_s:
@@ -83,140 +126,218 @@ def enrich_products(products: list) -> list:
     enriched = []
     for p in products:
         ep = {**p}
-        ep["category_info"] = cat_map.get(p["category"], {})
+        ep["category_info"] = cat_map.get(p.get("category", ""), {})
         ep["stock_status"] = get_stock_status(p)
         enriched.append(ep)
     return enriched
 
+# ─── Template Context Helper ─────────────────────────────────
+def tpl_context(request: Request, **kwargs):
+    """Build template context with is_admin injected."""
+    ctx = {"request": request, "is_admin": request.state.is_admin, "pharmacy": PHARMACY}
+    ctx.update(kwargs)
+    return ctx
+
 # ─── Page Routes ──────────────────────────────────────────────
-CITIES = [
-    "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir",
-    "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli",
-    "Diyarbakır", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari",
-    "Hatay", "Isparta", "Mersin", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir",
-    "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla", "Muş", "Nevşehir",
-    "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat",
-    "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman",
-    "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce"
-]
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
+    products = load_products()
+    
+    # Featured products: in-stock items, limited
+    featured = [p for p in products if p.get("stock", 0) > 0][:8]
+    enriched_featured = enrich_products(featured)
+    
     stats = {
-        "total_pharmacies": len(PHARMACIES),
-        "on_duty": sum(1 for p in PHARMACIES if p.get("on_duty", False)),
-        "total_products": len(BASE_PRODUCTS),
+        "total_products": len(products),
+        "in_stock": sum(1 for p in products if p.get("stock", 0) > 0),
+        "out_of_stock": sum(1 for p in products if p.get("stock", 0) == 0),
+        "categories": len(CATEGORIES),
     }
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "pharmacies": PHARMACIES,
-        "categories": CATEGORIES,
-        "cities": CITIES,
-        "stats": stats,
-    })
+    
+    return templates.TemplateResponse("index.html", tpl_context(
+        request,
+        categories=CATEGORIES,
+        featured_products=enriched_featured,
+        stats=stats,
+    ))
 
 @app.get("/urunler", response_class=HTMLResponse)
 async def products_page(
     request: Request,
     search: str = Query(default=""),
     category: str = Query(default=""),
-    pharmacy: str = Query(default=""),
-    city: str = Query(default="İstanbul")
 ):
-    selected_pharmacy = None
-    if pharmacy:
-        selected_pharmacy = next((p for p in PHARMACIES if p["id"] == pharmacy), None)
-        if selected_pharmacy:
-            city = selected_pharmacy.get("city", city)
-
-    city_pharmacies = [p for p in PHARMACIES if p.get("city") == city]
-    city_pharmacy_ids = {p["id"] for p in city_pharmacies}
-
-    filtered = PRODUCTS
-    if pharmacy:
-        filtered = [p for p in filtered if p["pharmacy_id"] == pharmacy]
-    else:
-        filtered = [p for p in filtered if p["pharmacy_id"] in city_pharmacy_ids]
-
+    products = load_products()
+    
+    filtered = products
     if search:
         q = search.lower()
-        filtered = [p for p in filtered if q in p["name"].lower() or q in p["generic"].lower()]
+        filtered = [p for p in filtered if q in p["name"].lower() or q in p.get("generic", "").lower()]
     if category:
-        filtered = [p for p in filtered if p["category"] == category]
+        filtered = [p for p in filtered if p.get("category") == category]
 
     total_count = len(filtered)
-    # Limit output to prevent browser lag with thousands of items
-    filtered = filtered[:100]
-
     enriched = enrich_products(filtered)
 
-    return templates.TemplateResponse("products.html", {
-        "request": request,
-        "products": enriched,
-        "categories": CATEGORIES,
-        "search": search,
-        "active_category": category,
-        "active_pharmacy": pharmacy,
-        "active_city": city,
-        "selected_pharmacy": selected_pharmacy,
-        "pharmacies": city_pharmacies,
-        "cities": CITIES,
-        "total": total_count,
-    })
+    return templates.TemplateResponse("products.html", tpl_context(
+        request,
+        products=enriched,
+        categories=CATEGORIES,
+        search=search,
+        active_category=category,
+        total=total_count,
+    ))
+
+# ─── Auth Routes ──────────────────────────────────────────────
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, error: str = Query(default="")):
+    if is_admin(request):
+        return RedirectResponse("/admin", status_code=303)
+    return templates.TemplateResponse("login.html", tpl_context(
+        request,
+        error=error,
+    ))
+
+@app.post("/login")
+async def login_submit(request: Request, password: str = Form(...)):
+    if password == ADMIN_PASSWORD:
+        response = RedirectResponse("/admin", status_code=303)
+        token = create_auth_token()
+        response.set_cookie(
+            key=COOKIE_NAME,
+            value=token,
+            httponly=True,
+            samesite="lax",
+            max_age=60 * 60 * 24 * 7,  # 7 days
+        )
+        return response
+    return RedirectResponse("/login?error=wrong", status_code=303)
+
+@app.get("/logout")
+async def logout(request: Request):
+    response = RedirectResponse("/", status_code=303)
+    response.delete_cookie(COOKIE_NAME)
+    return response
+
+# ─── Admin Routes ─────────────────────────────────────────────
 
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_page(
-    request: Request,
-    page: int = Query(default=1),
-    limit: int = Query(default=50)
-):
-    # Validate page/limit bounds
-    limit = max(1, min(limit, 200))
-    total_pages = max(1, (len(PRODUCTS) + limit - 1) // limit)
-    page = max(1, min(page, total_pages))
-
+async def admin_page(request: Request):
+    if not is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    
+    products = load_products()
+    
     stats = {
-        "total_products": len(PRODUCTS),
-        "in_stock": sum(1 for p in PRODUCTS if p["stock"] > 0),
-        "out_of_stock": sum(1 for p in PRODUCTS if p["stock"] == 0),
-        "low_stock": sum(1 for p in PRODUCTS if 0 < p["stock"] <= p["min_stock"]),
-        "total_value": sum(p["price"] * p["stock"] for p in PRODUCTS),
-        "prescription_count": sum(1 for p in PRODUCTS if p.get("prescription", False)),
+        "total_products": len(products),
+        "in_stock": sum(1 for p in products if p.get("stock", 0) > 0),
+        "out_of_stock": sum(1 for p in products if p.get("stock", 0) == 0),
+        "low_stock": sum(1 for p in products if 0 < p.get("stock", 0) <= p.get("min_stock", 5)),
+        "total_value": sum(p.get("price", 0) * p.get("stock", 0) for p in products),
+        "prescription_count": sum(1 for p in products if p.get("prescription", False)),
     }
     
-    start = (page - 1) * limit
-    end = start + limit
-    enriched = enrich_products(PRODUCTS[start:end])
+    enriched = enrich_products(products)
 
-    return templates.TemplateResponse("admin.html", {
-        "request": request,
-        "products": enriched,
-        "categories": CATEGORIES,
-        "stats": stats,
-        "page": page,
-        "total_pages": total_pages,
-        "limit": limit
-    })
+    return templates.TemplateResponse("admin.html", tpl_context(
+        request,
+        products=enriched,
+        categories=CATEGORIES,
+        stats=stats,
+    ))
 
-# ─── API Endpoints ────────────────────────────────────────────
-@app.get("/api/pharmacies")
-async def api_pharmacies(city: str = Query(default="")):
-    if city:
-        return [p for p in PHARMACIES if p.get("city") == city]
-    return PHARMACIES
+# ─── Admin API (CRUD) ────────────────────────────────────────
 
-@app.get("/api/products")
+@app.post("/api/products", response_class=JSONResponse)
+async def api_add_product(request: Request):
+    if not is_admin(request):
+        raise HTTPException(status_code=403, detail="Yetkisiz erişim")
+    
+    data = await request.json()
+    products = load_products()
+    
+    new_product = {
+        "id": f"p{uuid.uuid4().hex[:8]}",
+        "name": data.get("name", "").strip(),
+        "generic": data.get("generic", "").strip(),
+        "category": data.get("category", ""),
+        "price": float(data.get("price", 0)),
+        "stock": int(data.get("stock", 0)),
+        "min_stock": int(data.get("min_stock", 5)),
+        "prescription": bool(data.get("prescription", False)),
+        "barcode": data.get("barcode", "").strip(),
+        "description": data.get("description", "").strip(),
+        "created_at": datetime.now().strftime("%Y-%m-%d"),
+    }
+    
+    if not new_product["name"]:
+        raise HTTPException(status_code=400, detail="Ürün adı gerekli")
+    
+    products.append(new_product)
+    save_products(products)
+    
+    return {"success": True, "product": new_product}
+
+@app.put("/api/products/{product_id}", response_class=JSONResponse)
+async def api_update_product(request: Request, product_id: str):
+    if not is_admin(request):
+        raise HTTPException(status_code=403, detail="Yetkisiz erişim")
+    
+    data = await request.json()
+    products = load_products()
+    
+    for i, p in enumerate(products):
+        if p["id"] == product_id:
+            products[i].update({
+                "name": data.get("name", p["name"]).strip(),
+                "generic": data.get("generic", p["generic"]).strip(),
+                "category": data.get("category", p["category"]),
+                "price": float(data.get("price", p["price"])),
+                "stock": int(data.get("stock", p["stock"])),
+                "min_stock": int(data.get("min_stock", p["min_stock"])),
+                "prescription": bool(data.get("prescription", p["prescription"])),
+                "barcode": data.get("barcode", p.get("barcode", "")).strip(),
+                "description": data.get("description", p.get("description", "")).strip(),
+            })
+            save_products(products)
+            return {"success": True, "product": products[i]}
+    
+    raise HTTPException(status_code=404, detail="Ürün bulunamadı")
+
+@app.delete("/api/products/{product_id}", response_class=JSONResponse)
+async def api_delete_product(request: Request, product_id: str):
+    if not is_admin(request):
+        raise HTTPException(status_code=403, detail="Yetkisiz erişim")
+    
+    products = load_products()
+    original_len = len(products)
+    products = [p for p in products if p["id"] != product_id]
+    
+    if len(products) == original_len:
+        raise HTTPException(status_code=404, detail="Ürün bulunamadı")
+    
+    save_products(products)
+    return {"success": True}
+
+# ─── Public API ───────────────────────────────────────────────
+
+@app.get("/api/products", response_class=JSONResponse)
 async def api_products(
     search: str = Query(default=""),
     category: str = Query(default=""),
-    pharmacy: str = Query(default="")
 ):
-    filtered = PRODUCTS
+    products = load_products()
+    
     if search:
         q = search.lower()
-        filtered = [p for p in filtered if q in p["name"].lower() or q in p["generic"].lower()]
+        products = [p for p in products if q in p["name"].lower() or q in p.get("generic", "").lower()]
     if category:
-        filtered = [p for p in filtered if p["category"] == category]
-    if pharmacy:
-        filtered = [p for p in filtered if p["pharmacy_id"] == pharmacy]
-    return enrich_products(filtered)
+        products = [p for p in products if p.get("category") == category]
+    
+    return enrich_products(products)
+
+@app.get("/api/pharmacy", response_class=JSONResponse)
+async def api_pharmacy():
+    return PHARMACY

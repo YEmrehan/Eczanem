@@ -5,9 +5,11 @@
 
 {% block content %}
 <section class="page-header page-header-admin">
-    <div class="container">
-        <h1 class="page-title">Yönetim Paneli</h1>
-        <p class="page-subtitle">Sistemdeki eczane ve stok bilgilerini yönetin</p>
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+            <h1 class="page-title">Yönetim Paneli</h1>
+            <p class="page-subtitle">Buse Eczanesi — stok ve ürün yönetimi</p>
+        </div>
     </div>
 </section>
 
@@ -20,8 +22,8 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 </div>
                 <div class="admin-stat-info">
-                    <span class="admin-stat-num" data-count="{{ stats.total_products }}">{{ stats.total_products }}</span>
-                    <span class="admin-stat-label">Toplam Varyant</span>
+                    <span class="admin-stat-num">{{ stats.total_products }}</span>
+                    <span class="admin-stat-label">Toplam Ürün</span>
                 </div>
             </div>
             <div class="admin-stat-card">
@@ -29,7 +31,7 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                 </div>
                 <div class="admin-stat-info">
-                    <span class="admin-stat-num" data-count="{{ stats.in_stock }}">{{ stats.in_stock }}</span>
+                    <span class="admin-stat-num">{{ stats.in_stock }}</span>
                     <span class="admin-stat-label">Stokta Olanlar</span>
                 </div>
             </div>
@@ -38,7 +40,7 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 </div>
                 <div class="admin-stat-info">
-                    <span class="admin-stat-num" data-count="{{ stats.low_stock }}">{{ stats.low_stock }}</span>
+                    <span class="admin-stat-num">{{ stats.low_stock }}</span>
                     <span class="admin-stat-label">Kritik Stok</span>
                 </div>
             </div>
@@ -47,17 +49,29 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                 </div>
                 <div class="admin-stat-info">
-                    <span class="admin-stat-num" data-count="{{ stats.out_of_stock }}">{{ stats.out_of_stock }}</span>
+                    <span class="admin-stat-num">{{ stats.out_of_stock }}</span>
                     <span class="admin-stat-label">Tükenen</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Revenue Card -->
+        <div class="admin-revenue-card">
+            <div>
+                <span class="revenue-label">Tahmini Stok Değeri</span>
+                <span class="revenue-amount">₺{{ "{:,.2f}".format(stats.total_value) }}</span>
+            </div>
+            <div style="text-align: right;">
+                <span class="revenue-label">Reçeteli Ürünler</span>
+                <span class="admin-stat-num" style="font-size: 1.3rem;">{{ stats.prescription_count }}</span>
             </div>
         </div>
 
         <!-- Products Table -->
         <div class="admin-panel" id="tab-products">
             <div class="table-header">
-                <h3 class="table-title">Merkezi Stok Yönetimi</h3>
-                <button class="btn-primary btn-sm" onclick="showToast('Bu özellik yakında aktif olacak!')">
+                <h3 class="table-title">Ürün Yönetimi</h3>
+                <button class="btn-primary btn-sm" onclick="openProductModal()">
                     + Ürün Ekle
                 </button>
             </div>
@@ -66,15 +80,16 @@
                     <thead>
                         <tr>
                             <th>Ürün Adı</th>
-                            <th>Eczane</th>
                             <th>Kategori</th>
+                            <th>Fiyat</th>
                             <th>Stok</th>
                             <th>Durum</th>
+                            <th>İşlemler</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for product in products %}
-                        <tr>
+                        <tr id="row-{{ product.id }}">
                             <td>
                                 <div class="product-cell">
                                     <span class="product-cell-icon">{{ product.category_info.icon }}</span>
@@ -84,37 +99,219 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>{{ product.pharmacy_name }}</td>
                             <td>{{ product.category_info.name }}</td>
+                            <td class="price-cell">₺{{ "%.2f"|format(product.price) }}</td>
                             <td>{{ product.stock }}</td>
                             <td>
                                 <span class="stock-badge {{ product.stock_status.class }}">
                                     {{ product.stock_status.label }}
                                 </span>
                             </td>
+                            <td>
+                                <div style="display: flex; gap: 4px;">
+                                    <button class="btn-icon" title="Düzenle" onclick='editProduct({{ product | tojson }})'>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    </button>
+                                    <button class="btn-icon" title="Sil" onclick="deleteProduct('{{ product.id }}', '{{ product.name }}')" style="color: var(--danger);">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            
-            <!-- Pagination -->
-            <div class="pagination" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-top: 1px solid var(--border);">
-                <span style="font-size: 0.85rem; color: var(--text-muted);">
-                    Sayfa {{ page }} / {{ total_pages }} (Toplam {{ stats.total_products }} Varyant)
-                </span>
-                <div style="display: flex; gap: 10px;">
-                    {% if page > 1 %}
-                    <a href="/admin?page={{ page - 1 }}" class="btn-primary btn-sm" style="background: var(--bg-surface); border: 1px solid var(--border); color: var(--text);">Önceki</a>
-                    {% endif %}
-                    
-                    {% if page < total_pages %}
-                    <a href="/admin?page={{ page + 1 }}" class="btn-primary btn-sm">Sonraki</a>
-                    {% endif %}
-                </div>
-            </div>
-            
         </div>
     </div>
 </section>
+
+<!-- Product Modal -->
+<div class="modal-overlay" id="product-modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modal-title">Yeni Ürün Ekle</h3>
+            <button class="btn-icon" onclick="closeProductModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form id="product-form" onsubmit="submitProduct(event)">
+            <input type="hidden" id="edit-product-id" value="">
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Ürün Adı *</label>
+                    <input type="text" id="f-name" class="form-input" required placeholder="Örn: Parol 500mg">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Etken Madde</label>
+                    <input type="text" id="f-generic" class="form-input" placeholder="Örn: Parasetamol">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <select id="f-category" class="form-input custom-select">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.icon }} {{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fiyat (₺)</label>
+                    <input type="number" id="f-price" class="form-input" step="0.01" min="0" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Stok Adedi</label>
+                    <input type="number" id="f-stock" class="form-input" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Min. Stok</label>
+                    <input type="number" id="f-min-stock" class="form-input" min="0" value="5">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Barkod</label>
+                    <input type="text" id="f-barcode" class="form-input" placeholder="8699...">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 10px; padding-top: 1.5rem;">
+                    <label class="toggle-control">
+                        <input type="checkbox" id="f-prescription">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Reçeteli</span>
+                    </label>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label">Açıklama</label>
+                    <input type="text" id="f-description" class="form-input" placeholder="Kısa ürün açıklaması">
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeProductModal()">İptal</button>
+                <button type="submit" class="btn-primary" id="modal-submit-btn">Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ─── Product Modal Logic ─────────────────────────────
+
+function openProductModal(product = null) {
+    const modal = document.getElementById('product-modal');
+    const title = document.getElementById('modal-title');
+    const submitBtn = document.getElementById('modal-submit-btn');
+    const editId = document.getElementById('edit-product-id');
+    
+    if (product) {
+        title.textContent = 'Ürünü Düzenle';
+        submitBtn.textContent = 'Güncelle';
+        editId.value = product.id;
+        document.getElementById('f-name').value = product.name || '';
+        document.getElementById('f-generic').value = product.generic || '';
+        document.getElementById('f-category').value = product.category || '';
+        document.getElementById('f-price').value = product.price || 0;
+        document.getElementById('f-stock').value = product.stock || 0;
+        document.getElementById('f-min-stock').value = product.min_stock || 5;
+        document.getElementById('f-barcode').value = product.barcode || '';
+        document.getElementById('f-prescription').checked = product.prescription || false;
+        document.getElementById('f-description').value = product.description || '';
+    } else {
+        title.textContent = 'Yeni Ürün Ekle';
+        submitBtn.textContent = 'Kaydet';
+        editId.value = '';
+        document.getElementById('product-form').reset();
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function closeProductModal() {
+    document.getElementById('product-modal').style.display = 'none';
+}
+
+function editProduct(product) {
+    openProductModal(product);
+}
+
+async function submitProduct(e) {
+    e.preventDefault();
+    
+    const editId = document.getElementById('edit-product-id').value;
+    const data = {
+        name: document.getElementById('f-name').value,
+        generic: document.getElementById('f-generic').value,
+        category: document.getElementById('f-category').value,
+        price: parseFloat(document.getElementById('f-price').value) || 0,
+        stock: parseInt(document.getElementById('f-stock').value) || 0,
+        min_stock: parseInt(document.getElementById('f-min-stock').value) || 5,
+        barcode: document.getElementById('f-barcode').value,
+        prescription: document.getElementById('f-prescription').checked,
+        description: document.getElementById('f-description').value,
+    };
+    
+    try {
+        let url = '/api/products';
+        let method = 'POST';
+        
+        if (editId) {
+            url = `/api/products/${editId}`;
+            method = 'PUT';
+        }
+        
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        
+        const result = await res.json();
+        
+        if (res.ok && result.success) {
+            showToast(editId ? 'Ürün güncellendi!' : 'Ürün eklendi!');
+            closeProductModal();
+            setTimeout(() => window.location.reload(), 500);
+        } else {
+            showToast('Hata: ' + (result.detail || 'Bilinmeyen hata'));
+        }
+    } catch (err) {
+        showToast('Bağlantı hatası: ' + err.message);
+    }
+}
+
+async function deleteProduct(id, name) {
+    if (!confirm(`"${name}" ürününü silmek istediğinize emin misiniz?`)) return;
+    
+    try {
+        const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+        const result = await res.json();
+        
+        if (res.ok && result.success) {
+            showToast('Ürün silindi!');
+            const row = document.getElementById(`row-${id}`);
+            if (row) {
+                row.style.transition = 'opacity 0.3s, transform 0.3s';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(20px)';
+                setTimeout(() => row.remove(), 300);
+            }
+        } else {
+            showToast('Hata: ' + (result.detail || 'Bilinmeyen hata'));
+        }
+    } catch (err) {
+        showToast('Bağlantı hatası: ' + err.message);
+    }
+}
+
+// Close modal on overlay click
+document.getElementById('product-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeProductModal();
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeProductModal();
+});
+</script>
 {% endblock %}

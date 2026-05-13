@@ -1,80 +1,136 @@
 {% extends "base.html" %}
 {% set active_page = "home" %}
 
-{% block title %}Eczaneler Haritası ve Listesi{% endblock %}
+{% block title %}Buse Eczanesi — Bartın{% endblock %}
 
 {% block content %}
-<!-- Advanced Search Bar -->
-<section class="search-section" style="background: var(--bg-card); padding: 20px 0; border-bottom: 1px solid var(--border);">
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
     <div class="container">
-        <div class="advanced-search-bar" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
-            <div class="search-box search-box-sm" style="flex: 2; min-width: 200px;">
-                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="name-search" placeholder="Eczane adı ara..." class="search-input">
-            </div>
-            
-            <div class="search-box search-box-sm" style="flex: 1; min-width: 150px;">
-                <select id="city-selector" class="search-input custom-select">
-                    <option value="Tümü">Tüm İller</option>
-                    {% for city in cities %}
-                    <option value="{{ city }}" {% if city == 'İstanbul' %}selected{% endif %}>{{ "%02d" % loop.index }} - {{ city }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+        <div class="hero-content">
+            <span class="hero-badge">📍 Bartın Merkez</span>
+            <h1 class="hero-title">
+                <span class="gradient-text">Buse Eczanesi</span>
+            </h1>
+            <p class="hero-subtitle">Sağlığınız için buradayız. Tüm ilaç ve ürün stoklarımızı anlık olarak takip edin.</p>
+            <a href="/urunler" class="btn-primary" style="font-size: 1.05rem; padding: 0.8rem 2rem;">
+                Ürünleri İncele →
+            </a>
+        </div>
 
-            <div class="search-box search-box-sm" style="flex: 1; min-width: 150px;">
-                <select id="district-selector" class="search-input custom-select">
-                    <option value="">Tüm İlçeler</option>
-                    <!-- Dinamik olarak JS ile dolacak -->
-                </select>
+        <!-- Quick Stats -->
+        <div class="hero-stats" style="margin-top: 3rem;">
+            <div class="hero-stat">
+                <span class="hero-stat-num">{{ stats.total_products }}</span>
+                <span class="hero-stat-label">Toplam Ürün</span>
             </div>
-
-            <label class="toggle-control" style="flex: 1; min-width: 200px; justify-content: flex-end;">
-                <input type="checkbox" id="on-duty-filter">
-                <span class="toggle-slider"></span>
-                <span class="toggle-label">Nöbetçiler</span>
-            </label>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat">
+                <span class="hero-stat-num" style="color: var(--success)">{{ stats.in_stock }}</span>
+                <span class="hero-stat-label">Stokta</span>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat">
+                <span class="hero-stat-num" style="color: var(--danger)">{{ stats.out_of_stock }}</span>
+                <span class="hero-stat-label">Tükenen</span>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat">
+                <span class="hero-stat-num" style="color: var(--warning)">{{ stats.categories }}</span>
+                <span class="hero-stat-label">Kategori</span>
+            </div>
         </div>
     </div>
 </section>
 
-<!-- Map and List View Layout -->
-<section class="section" style="padding-top: 20px;">
+<!-- Categories Section -->
+<section class="section">
     <div class="container">
-        <div class="map-list-layout">
-            
-            <!-- List View Sidebar -->
-            <div class="pharmacy-sidebar">
-                <div class="sidebar-header">
-                    <h3 style="margin:0; font-size: 1.1rem;">Eczane Listesi</h3>
-                    <span id="list-count" class="badge">0 Bulundu</span>
-                </div>
-                <div id="pharmacy-list" class="pharmacy-list-container">
-                    <!-- Cards will be injected by JS (Lazy Loaded) -->
-                </div>
-                <button id="load-more-trigger" class="btn-primary" style="display: block; width: 100%; border-radius: 0; padding: 12px; display: none;">
-                    Daha Fazla Göster
-                </button>
-            </div>
+        <div class="section-header">
+            <h2 class="section-title">Kategoriler</h2>
+            <a href="/urunler" class="section-link">Tümünü Gör →</a>
+        </div>
+        <div class="categories-grid">
+            {% for cat in categories %}
+            <a href="/urunler?category={{ cat.id }}" class="category-card" style="--cat-color: {{ cat.color }}">
+                <span class="category-icon">{{ cat.icon }}</span>
+                <span class="category-name">{{ cat.name }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
 
-            <!-- Map View -->
-            <div class="pharmacy-map-container">
-                <div id="map" class="pharmacy-map-full"></div>
-                
-                <!-- Quick Stats Overlay -->
-                <div class="map-stats-overlay">
-                    <div class="hero-stat">
-                        <span id="map-total-count" class="hero-stat-num" data-count="{{ stats.total_pharmacies }}">{{ stats.total_pharmacies }}</span>
-                        <span class="hero-stat-label">Toplam</span>
-                    </div>
-                    <div class="hero-stat-divider"></div>
-                    <div class="hero-stat">
-                        <span id="map-duty-count" class="hero-stat-num" style="color: var(--danger)" data-count="{{ stats.on_duty }}">{{ stats.on_duty }}</span>
-                        <span class="hero-stat-label">Nöbetçi</span>
-                    </div>
+<!-- Featured Products -->
+{% if featured_products %}
+<section class="section" style="padding-top: 0;">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Öne Çıkan Ürünler</h2>
+            <a href="/urunler" class="section-link">Tümünü Gör →</a>
+        </div>
+        <div class="products-grid">
+            {% for product in featured_products %}
+            <div class="product-card">
+                <div class="product-card-top">
+                    <span class="product-category-badge" style="--cat-color: {{ product.category_info.color }}">
+                        {{ product.category_info.icon }} {{ product.category_info.name }}
+                    </span>
+                    {% if product.prescription %}
+                    <span class="prescription-badge">Reçeteli</span>
+                    {% endif %}
+                </div>
+                <h3 class="product-name">{{ product.name }}</h3>
+                <p class="product-generic">{{ product.generic }}</p>
+                {% if product.description %}
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">{{ product.description }}</p>
+                {% endif %}
+                <div class="product-card-bottom">
+                    <span class="product-price">₺{{ "%.2f"|format(product.price) }}</span>
+                    <span class="stock-badge {{ product.stock_status.class }}">
+                        {{ product.stock_status.label }} ({{ product.stock }})
+                    </span>
                 </div>
             </div>
-            
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Info Section -->
+<section class="how-section section">
+    <div class="container">
+        <div class="section-header" style="justify-content: center; text-align: center;">
+            <h2 class="section-title" style="width: 100;">Nasıl Çalışır?</h2>
+        </div>
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <h3 class="step-title">Ürün Ara</h3>
+                <p class="step-desc">İhtiyacınız olan ilacı veya ürünü arayın</p>
+            </div>
+            <div class="step-connector">
+                <svg width="40" height="16" viewBox="0 0 40 16" fill="none"><path d="M0 8h36m0 0l-6-6m6 6l-6 6" stroke="var(--primary)" stroke-width="2"/></svg>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <h3 class="step-title">Stok Kontrol</h3>
+                <p class="step-desc">Anlık stok durumunu görüntüleyin</p>
+            </div>
+            <div class="step-connector">
+                <svg width="40" height="16" viewBox="0 0 40 16" fill="none"><path d="M0 8h36m0 0l-6-6m6 6l-6 6" stroke="var(--primary)" stroke-width="2"/></svg>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <h3 class="step-title">Eczaneye Gel</h3>
+                <p class="step-desc">Bartın Merkez'deki eczanemize gelin</p>
+            </div>
         </div>
     </div>
 </section>
