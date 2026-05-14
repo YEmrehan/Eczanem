@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakım Modu | Maintenance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        ::selection {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+
+        .container {
+            text-align: center;
+            padding: 3rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 24px;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 650px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            /* Uyarı aldığın kısım düzeltildi: */
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            font-weight: 900;
+        }
+
+        .price-tag {
+            display: block;
+            font-size: 1.1rem;
+            margin: 8px 0;
+            color: #94a3b8;
+            letter-spacing: 1px;
+        }
+
+        .highlight {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+
+        /* YENİ HEDİYE KUTUSU TASARIMI */
+        .gift-card {
+            margin-top: 2.5rem;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+            border: 1px dashed rgba(52, 211, 153, 0.4);
+            border-radius: 16px;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .gift-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .gift-card::before {
+            content: '🎁';
+            font-size: 1.5rem;
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f172a;
+            padding: 0 10px;
+        }
+
+        .gift-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #34d399;
+            font-style: italic;
+            text-shadow: 0 0 15px rgba(52, 211, 153, 0.3);
+        }
+
+        .gear {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            display: inline-block;
+            animation: spin 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            filter: drop-shadow(0 0 10px #38bdf8);
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="gear">⚙️</div>
+        <h1>MAINTENANCE</h1>
+
+        <div class="content">
+            <span class="price-tag">Animasyon <span class="highlight">2000TL</span></span>
+            <span class="price-tag">Web sitesi <span class="highlight">30000TL</span></span>
+
+            <div class="gift-card">
+                <p class="gift-text">
+                    "Ama zaten sen 1 günde yapabiliyormuşsun, <br> bu sayfa da benden sana hediye olsun."
+                </p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
